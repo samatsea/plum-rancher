@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plum Rancher</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      background: #17230f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Courier New", monospace;
+      overflow: hidden;
+    }
+    #wrap {
+      position: relative;
+      width: min(960px, 100vw - 24px);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      image-rendering: pixelated;
+      border: 5px solid #4a3320;
+      border-radius: 6px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.6);
+      background: #6ab04c;
+    }
+    .overlay {
+      position: absolute;
+      inset: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: rgba(20, 28, 12, .88);
+      color: #f2e8c9;
+      border-radius: 3px;
+      gap: 14px;
+      padding: 20px;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      color: #d989c8;
+      letter-spacing: 3px;
+      text-shadow: 3px 3px 0 #5c2a52;
+    }
+    .overlay p { max-width: 560px; line-height: 1.5; font-size: 15px; }
+    .overlay .controls { color: #b7cf9a; font-size: 14px; line-height: 1.8; }
+    .overlay .press {
+      margin-top: 6px;
+      font-weight: bold;
+      color: #ffd76b;
+      animation: blink 1.2s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: .25; } }
+
+    #shop {
+      justify-content: flex-start;
+      padding-top: 36px;
+      background: rgba(30, 22, 12, .93);
+    }
+    #shop h2 { color: #ffd76b; letter-spacing: 2px; margin-bottom: 4px; }
+    #shop .hint { color: #b7a98a; font-size: 13px; }
+    .shop-item {
+      width: min(520px, 90%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #3b2c18;
+      border: 2px solid #6b5334;
+      border-radius: 6px;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    .shop-item .num {
+      font-weight: bold;
+      color: #ffd76b;
+      font-size: 18px;
+      width: 20px;
+    }
+    .shop-item .info { flex: 1; }
+    .shop-item .name { font-weight: bold; font-size: 15px; }
+    .shop-item .desc { font-size: 12.5px; color: #cbbfa4; }
+    .shop-item .price { font-weight: bold; color: #ffd76b; white-space: nowrap; }
+    .shop-item.owned { opacity: .55; }
+    .shop-item.owned .price { color: #8fce6e; }
+    .shop-item.cant .price { color: #d97b6c; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="960" height="544"></canvas>
+    <div id="title" class="overlay">
+      <h1>PLUM RANCHER</h1>
+      <p>You are <b>Brontosaurus</b>, a brindle French Bulldog with one great treasure:
+        a plum tree. The local deer think it's a free buffet. Bark them off, harvest
+        your plums, sell them, and build the finest plum ranch in the valley.</p>
+      <div class="controls">
+        WASD / Arrows — move &nbsp;·&nbsp; SPACE — bark &nbsp;·&nbsp; E — harvest / sell / shop
+      </div>
+      <div class="press">— press ENTER to start —</div>
+    </div>
+    <div id="shop" class="overlay hidden"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
