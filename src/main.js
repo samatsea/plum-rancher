@@ -127,22 +127,34 @@ const sfx = {
 
 /* ---------------- Input ---------------- */
 const keys = {};
+// Normalize to KeyboardEvent.code style; some environments only supply e.key.
+function keyId(e) {
+  if (e.code) return e.code;
+  const k = e.key;
+  if (k === ' ') return 'Space';
+  if (k.length === 1 && /[a-z]/i.test(k)) return 'Key' + k.toUpperCase();
+  if (/^[0-9]$/.test(k)) return 'Digit' + k;
+  return k; // 'ArrowLeft', 'Enter', 'Escape', ...
+}
 window.addEventListener('keydown', (e) => {
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-  if (keys[e.code]) return;
-  keys[e.code] = true;
+  const code = keyId(e);
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) e.preventDefault();
+  if (keys[code]) return;
+  keys[code] = true;
 
   if (!state.started) {
-    if (e.code === 'Enter') startGame();
+    if (code === 'Enter') startGame();
     return;
   }
-  if (e.code === 'Space') bark();
-  if (e.code === 'KeyE') interact();
-  if (e.code === 'Escape' && state.shopOpen) toggleShop(false);
-  if (e.code === 'KeyM') { state.muted = !state.muted; toast(player.x, player.y - 14, state.muted ? 'muted' : 'sound on', '#f2e8c9'); }
-  if (state.shopOpen && /^Digit[1-5]$/.test(e.code)) buyItem(Number(e.code.slice(5)) - 1);
+  if (code === 'Space') bark();
+  if (code === 'KeyE') interact();
+  if (code === 'Escape' && state.shopOpen) toggleShop(false);
+  if (code === 'KeyM') { state.muted = !state.muted; toast(player.x, player.y - 14, state.muted ? 'muted' : 'sound on', '#f2e8c9'); }
+  if (state.shopOpen && /^Digit[1-5]$/.test(code)) buyItem(Number(code.slice(5)) - 1);
 });
-window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('keyup', (e) => { keys[keyId(e)] = false; });
+
+document.getElementById('title').addEventListener('click', () => { if (!state.started) startGame(); });
 
 function startGame() {
   state.started = true;
@@ -598,16 +610,17 @@ function rand(a, b) { return a + Math.random() * (b - a); }
 /* ---------------- Main loop ---------------- */
 let last = performance.now();
 let saveT = 0;
+function tick(dt) {
+  updatePlayer(dt);
+  updateDeer(dt);
+  updateWorld(dt);
+  saveT += dt;
+  if (saveT > 5) { saveT = 0; save(); }
+}
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
-  if (state.started) {
-    updatePlayer(dt);
-    updateDeer(dt);
-    updateWorld(dt);
-    saveT += dt;
-    if (saveT > 5) { saveT = 0; save(); }
-  }
+  if (state.started) tick(dt);
   render();
   requestAnimationFrame(frame);
 }
@@ -618,4 +631,9 @@ window.plumDebug = {
   state, player,
   give(coins) { state.coins += coins; if (state.shopOpen) renderShop(); },
   spawnDeer,
+  step(seconds = 1) {           // advance simulation manually (for tests)
+    const n = Math.round(seconds * 60);
+    for (let i = 0; i < n; i++) tick(1 / 60);
+    render();
+  },
 };
