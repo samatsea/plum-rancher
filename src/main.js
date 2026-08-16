@@ -41,6 +41,8 @@ const SHOP_ITEMS = [
 const state = {
   started: false,
   shopOpen: false,
+  paused: false,
+  idle: false,
   coins: 0,
   plums: 0,
   day: 1,
@@ -146,8 +148,11 @@ window.addEventListener('keydown', (e) => {
     if (code === 'Enter') startGame();
     return;
   }
+  if (code === 'KeyP') { togglePause(); return; }
+  if (state.paused) return;
   if (code === 'Space') bark();
   if (code === 'KeyE') interact();
+  if (code === 'KeyI') toggleIdle();
   if (code === 'Escape' && state.shopOpen) toggleShop(false);
   if (code === 'KeyM') { state.muted = !state.muted; toast(player.x, player.y - 14, state.muted ? 'muted' : 'sound on', '#f2e8c9'); }
   if (state.shopOpen && /^Digit[1-5]$/.test(code)) buyItem(Number(code.slice(5)) - 1);
@@ -177,38 +182,112 @@ function bark() {
   }
 }
 
+function harvestTree(t) {
+  if (t.plums <= 0) return false;
+  toast(t.x + TREE_W / 2, t.y + 10, `+${t.plums} plums`, '#d989c8');
+  state.plums += t.plums;
+  t.plums = 0; t.t = 0;
+  sfx.harvest(); save();
+  return true;
+}
+function sellPlums() {
+  if (state.plums <= 0) return false;
+  const earned = state.plums * PLUM_PRICE;
+  state.coins += earned;
+  toast(BIN.x + 14, BIN.y - 6, `+${earned}g`, '#ffd76b');
+  state.plums = 0;
+  sfx.sell(); save();
+  return true;
+}
+
 function interact() {
   if (state.shopOpen) { toggleShop(false); return; }
   const px = player.x + 8, py = player.y + 6;
 
-  // harvest nearest tree with plums
   for (const t of state.trees) {
-    if (dist(px, py, t.x + TREE_W / 2, t.y + TREE_H - 6) < 30 && t.plums > 0) {
-      state.plums += t.plums;
-      toast(t.x + TREE_W / 2, t.y + 10, `+${t.plums} plums`, '#d989c8');
-      t.plums = 0; t.t = 0;
-      sfx.harvest(); save();
-      return;
-    }
+    if (t.plums > 0 && dist(px, py, t.x + TREE_W / 2, t.y + TREE_H - 6) < 30) { harvestTree(t); return; }
   }
-  // sell bin
   if (dist(px, py, BIN.x + 14, BIN.y + 18) < 30) {
-    if (state.plums > 0) {
-      const earned = state.plums * PLUM_PRICE;
-      state.coins += earned;
-      toast(BIN.x + 14, BIN.y - 6, `+${earned}g`, '#ffd76b');
-      state.plums = 0;
-      sfx.sell(); save();
-    } else {
-      toast(BIN.x + 14, BIN.y - 6, 'no plums!', '#d97b6c');
-      sfx.denied();
-    }
+    if (!sellPlums()) { toast(BIN.x + 14, BIN.y - 6, 'no plums!', '#d97b6c'); sfx.denied(); }
     return;
   }
-  // shop vending machine
-  if (dist(px, py, STAND.x + 11, STAND.y + 26) < 30) {
-    toggleShop(true);
+  if (dist(px, py, STAND.x + 11, STAND.y + 26) < 30) toggleShop(true);
+}
+
+function togglePause() {
+  if (!state.started || state.shopOpen) return;
+  state.paused = !state.paused;
+  if (state.paused) beep(330, 0.06, 'square', 0.1); else beep(440, 0.06, 'square', 0.1);
+}
+function toggleIdle() {
+  state.idle = !state.idle;
+  ai.target = null; ai.rest = 0;
+  toast(player.x + 8, player.y - 14, state.idle ? 'auto: ON' : 'auto: OFF', state.idle ? '#8fce6e' : '#f2e8c9');
+  beep(state.idle ? 660 : 392, 0.09, 'triangle', 0.12);
+}
+
+/* ---------------- Idle mode: Brontosaurus on autopilot ---------------- */
+const ai = { target: null, rest: 0 };
+
+function steer(px, py, tx, ty) {
+  const dx = tx - px, dy = ty - py;
+  const n = Math.hypot(dx, dy) || 1;
+  return [dx / n, dy / n];
+}
+
+function autoPilot(dt) {
+  const px = player.x + 8, py = player.y + 6;
+
+  // 1. Defend: chase the nearest deer that isn't already fleeing, and bark.
+  let deer = null, dbest = Infinity;
+  for (const d of state.deer) {
+    if (d.state === 'flee') continue;
+    const dd = dist(px, py, d.x + DEER_W / 2, d.y + DEER_H / 2);
+    if (dd < dbest) { dbest = dd; deer = d; }
   }
+  if (deer) {
+    ai.target = null;
+    if (dbest < 62) { bark(); return [0, 0]; }   // bark scares all deer within 85px
+    return steer(px, py, deer.x + DEER_W / 2, deer.y + DEER_H / 2);
+  }
+
+  // 2. Hands full: go sell.
+  if (state.plums >= 6) return goSell(px, py);
+
+  // 3. A ripe tree (4+ plums): go harvest it.
+  let tree = null, tbest = Infinity;
+  for (const t of state.trees) {
+    if (t.plums < 4) continue;
+    const dd = dist(px, py, t.x + TREE_W / 2, t.y + TREE_H - 6);
+    if (dd < tbest) { tbest = dd; tree = t; }
+  }
+  if (tree) {
+    if (tbest < 30) { harvestTree(tree); return [0, 0]; }
+    return steer(px, py, tree.x + TREE_W / 2, tree.y + TREE_H - 6);
+  }
+
+  // 4. Any leftover plums: sell them.
+  if (state.plums > 0) return goSell(px, py);
+
+  // 5. Nothing to do: mosey around the orchard.
+  return idleWander(px, py, dt);
+}
+
+function goSell(px, py) {
+  if (dist(px, py, BIN.x + 14, BIN.y + 18) < 30) { sellPlums(); return [0, 0]; }
+  return steer(px, py, BIN.x + 14, BIN.y + 18);
+}
+
+function idleWander(px, py, dt) {
+  if (ai.rest > 0) { ai.rest -= dt; return [0, 0]; }
+  if (!ai.target || dist(px, py, ai.target.x, ai.target.y) < 8) {
+    if (ai.target) { ai.target = null; ai.rest = rand(0.7, 2.2); return [0, 0]; }
+    ai.target = {
+      x: rand((FENCE.x1 + 2) * TILE, (FENCE.x2 - 2) * TILE),
+      y: rand((FENCE.y1 + 2) * TILE, (FENCE.y2 - 2) * TILE),
+    };
+  }
+  return steer(px, py, ai.target.x, ai.target.y);
 }
 
 function toggleShop(open) {
@@ -358,6 +437,10 @@ function updatePlayer(dt) {
   if (keys.KeyD || keys.ArrowRight) dx += 1;
   if (keys.KeyW || keys.ArrowUp) dy -= 1;
   if (keys.KeyS || keys.ArrowDown) dy += 1;
+
+  // Idle mode drives Brontosaurus, but manual input always takes priority.
+  if (state.idle && dx === 0 && dy === 0) [dx, dy] = autoPilot(dt);
+
   player.moving = !!(dx || dy);
   if (player.moving) {
     const sp = 72 * (state.upgrades.treats ? 1.35 : 1);
@@ -574,6 +657,20 @@ function render() {
 
   // HUD
   if (state.started) drawHUD();
+
+  // pause overlay
+  if (state.paused) {
+    ctx.fillStyle = 'rgba(15, 20, 10, 0.62)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f2e8c9';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText('PAUSED', W / 2, H / 2 - 2);
+    ctx.font = '8px monospace';
+    ctx.fillStyle = 'rgba(242,232,201,0.8)';
+    ctx.fillText('press P to resume', W / 2, H / 2 + 12);
+    ctx.textAlign = 'left';
+  }
 }
 
 function drawHUD() {
@@ -596,10 +693,20 @@ function drawHUD() {
   ctx.fillRect(4, 20, 118, 4);
   ctx.fillStyle = '#ffd76b';
   ctx.fillRect(5, 21, 116 * (state.dayT / DAY_LEN), 2);
+  // auto-mode badge
+  if (state.idle) {
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(20, 28, 12, 0.72)';
+    ctx.fillRect(W - 52, 4, 48, 12);
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = '#8fce6e';
+    ctx.fillText('● AUTO', W - 8, 13);
+    ctx.textAlign = 'left';
+  }
   // controls hint
   ctx.fillStyle = 'rgba(242,232,201,0.55)';
   ctx.font = '7px monospace';
-  ctx.fillText('WASD move · SPACE bark · E use · M mute', 6, H - 5);
+  ctx.fillText('WASD move · SPACE bark · E use · P pause · I auto · M mute', 6, H - 5);
 }
 
 /* ---------------- Helpers ---------------- */
@@ -620,7 +727,7 @@ function tick(dt) {
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
-  if (state.started) tick(dt);
+  if (state.started && !state.paused) tick(dt);
   render();
   requestAnimationFrame(frame);
 }
