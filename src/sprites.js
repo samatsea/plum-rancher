@@ -70,58 +70,68 @@ export const DOG_W = 16, DOG_H = 12;
 // Facing left; flip for right. B tan, L dark brown, C cream, K dark.
 const DEER_PAL = { B: '#c49a66', L: '#8d6b42', C: '#efe3cb', K: '#2a1e12' };
 
+// Compact body carried high on long slender legs — reads as deer, not llama.
 const DEER_BODY = [
-  '.BB...............',
-  '.BBB..............',
-  'KBKB..............',
-  '.BBBB.............',
+  '..B..B............',
+  '..B..B............',
+  '..BBBB............',
+  '.BBBBB............',
+  'KBBKBB............',
   '..BBB.............',
   '..BBBB............',
+  '..BBBBBBBBBBB.....',
+  '..BBBBBBBBBBBBB...',
+  '..BCCBBBBBBBBBB...',
   '...BBBBBBBBBBBB...',
-  '...BBBBBBBBBBBBCC.',
-  '...BCCBBBBBBBBBCC.',
-  '...BCCCBBBBBBBBB..',
-  '....BBBBBBBBBBB...',
 ];
 const DEER_LEGS_A = [
-  '....BB......BB....',
-  '....BB......BB....',
-  '....KK......KK....',
+  '...BB.......BB....',
+  '...BB.......BB....',
+  '...BB.......BB....',
+  '...BB.......BB....',
+  '...BB.......BB....',
+  '...KK.......KK....',
 ];
 const DEER_LEGS_B = [
-  '.....BB....BB.....',
-  '.....BB....BB.....',
-  '.....KK....KK.....',
+  '..BB........BB....',
+  '..BB........BB....',
+  '..BB.........BB...',
+  '.BB..........BB...',
+  '.BB..........BB...',
+  '.KK..........KK...',
 ];
 
 export const deerFrames = [
   px([...DEER_BODY, ...DEER_LEGS_A], DEER_PAL),
   px([...DEER_BODY, ...DEER_LEGS_B], DEER_PAL),
 ];
-export const DEER_W = 18, DEER_H = 14;
+export const DEER_W = 18, DEER_H = 17;
 
 /* ---------------- Plum tree ---------------- */
-export const TREE_W = 40, TREE_H = 44;
+export const TREE_W = 56, TREE_H = 64;
 // Fixed plum positions inside the canopy (max 6 plums per tree).
 export const PLUM_SLOTS = [
-  [12, 10], [26, 8], [19, 16], [30, 17], [9, 18], [22, 23],
+  [17, 15], [37, 13], [27, 23], [43, 26], [13, 29], [31, 34],
 ];
 
 export const treeSprite = (() => {
   const [c, g] = canvasOf(TREE_W, TREE_H);
   // trunk
   g.fillStyle = '#6b4527';
-  g.fillRect(17, 26, 6, 16);
+  g.fillRect(24, 38, 9, 26);
   g.fillStyle = '#54351d';
-  g.fillRect(17, 26, 2, 16);
-  g.fillRect(14, 40, 12, 2); // roots
+  g.fillRect(24, 38, 3, 26);
+  g.fillRect(19, 60, 19, 3); // roots
+  g.fillStyle = '#7a5230';
+  g.fillRect(31, 40, 2, 20); // trunk highlight
   // canopy
-  blob(g, 20, 15, 13, '#2f6627');
-  blob(g, 13, 11, 8, '#3e7d32');
-  blob(g, 26, 12, 8, '#3e7d32');
-  blob(g, 20, 19, 9, '#356f2b');
-  blob(g, 15, 8, 4, '#4c9440');
-  blob(g, 27, 9, 3, '#4c9440');
+  blob(g, 28, 22, 19, '#2f6627');
+  blob(g, 17, 17, 12, '#3e7d32');
+  blob(g, 39, 18, 12, '#3e7d32');
+  blob(g, 28, 30, 13, '#356f2b');
+  blob(g, 20, 12, 6, '#4c9440');
+  blob(g, 40, 13, 5, '#4c9440');
+  blob(g, 30, 20, 4, '#54a648');
   return c;
 })();
 
@@ -163,25 +173,8 @@ export const houseSprite = (() => {
   return c;
 })();
 
-/* ---------------- Sell bin ---------------- */
-export const binSprite = (() => {
-  const [c, g] = canvasOf(18, 14);
-  g.fillStyle = '#8a6134';
-  g.fillRect(0, 2, 18, 12);
-  g.fillStyle = '#6b4a26';
-  g.fillRect(0, 2, 18, 2);
-  g.fillRect(0, 12, 18, 2);
-  g.fillRect(0, 2, 2, 12);
-  g.fillRect(16, 2, 2, 12);
-  g.fillStyle = '#3a2a14';
-  g.fillRect(2, 4, 14, 8); // opening
-  drawPlum(g, 5, 6);
-  drawPlum(g, 10, 7);
-  return c;
-})();
-
-/* ---------------- Shop stand ---------------- */
-export const standSprite = (() => {
+/* ---------------- Sell stall (striped produce stand — bring plums here) ---------------- */
+export const stallSprite = (() => {
   const [c, g] = canvasOf(28, 26);
   // counter
   g.fillStyle = '#9c7040';
@@ -200,11 +193,67 @@ export const standSprite = (() => {
   }
   g.fillStyle = '#a84433';
   g.fillRect(0, 6, 28, 1);
-  // coin sign
+  // crate of plums on the counter (this is where you sell)
+  g.fillStyle = '#7c5630';
+  g.fillRect(9, 15, 11, 7);
+  g.fillStyle = '#5c3f22';
+  g.fillRect(9, 15, 11, 1);
+  drawPlum(g, 10, 16);
+  drawPlum(g, 14, 16);
+  drawPlum(g, 12, 18);
+  drawPlum(g, 16, 18);
+  return c;
+})();
+
+/* ---------------- Shop vending machine ---------------- */
+export const vendingSprite = (() => {
+  const [c, g] = canvasOf(22, 34);
+  // machine body
+  g.fillStyle = '#b0392c';
+  g.fillRect(1, 1, 20, 32);
+  g.fillStyle = '#8f2b20';
+  g.fillRect(1, 1, 20, 2);     // top shadow
+  g.fillRect(1, 1, 2, 32);     // left edge
+  g.fillStyle = '#d0574a';
+  g.fillRect(19, 1, 2, 32);    // right highlight
+  // glass display window
+  g.fillStyle = '#213c46';
+  g.fillRect(3, 4, 12, 20);
+  g.fillStyle = '#2f5563';
+  g.fillRect(3, 4, 12, 1);
+  // three shelves of goods (plums as stock)
+  for (let r = 0; r < 3; r++) {
+    const y = 6 + r * 6;
+    g.fillStyle = '#172a31';
+    g.fillRect(3, y + 4, 12, 1); // shelf line
+    drawPlum(g, 5, y);
+    drawPlum(g, 9, y);
+    drawPlum(g, 12, y);
+  }
+  // control panel (right column)
+  g.fillStyle = '#7a2016';
+  g.fillRect(16, 4, 4, 20);
+  // buttons
   g.fillStyle = '#ffd76b';
-  g.fillRect(12, 16, 4, 4);
-  g.fillStyle = '#b8922e';
-  g.fillRect(13, 17, 2, 2);
+  g.fillRect(17, 6, 2, 2);
+  g.fillStyle = '#8fce6e';
+  g.fillRect(17, 10, 2, 2);
+  g.fillStyle = '#e8e0cc';
+  g.fillRect(17, 14, 2, 2);
+  // coin slot
+  g.fillStyle = '#2b1a0e';
+  g.fillRect(17, 19, 2, 3);
+  g.fillStyle = '#ffd76b';
+  g.fillRect(17, 19, 2, 1);
+  // dispenser tray
+  g.fillStyle = '#2b1a0e';
+  g.fillRect(3, 26, 16, 5);
+  g.fillStyle = '#17110a';
+  g.fillRect(4, 27, 14, 3);
+  // little feet
+  g.fillStyle = '#5c1c14';
+  g.fillRect(2, 32, 3, 2);
+  g.fillRect(17, 32, 3, 2);
   return c;
 })();
 

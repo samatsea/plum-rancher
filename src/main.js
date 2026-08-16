@@ -2,7 +2,7 @@ import {
   dogFrames, DOG_W, DOG_H,
   deerFrames, DEER_W, DEER_H,
   treeSprite, TREE_W, TREE_H, PLUM_SLOTS, drawPlum,
-  houseSprite, binSprite, standSprite, scarecrowSprite,
+  houseSprite, stallSprite, vendingSprite, scarecrowSprite,
   makeBackground, drawFencePost, drawFenceRailH, drawFenceRailV,
 } from './sprites.js';
 
@@ -192,21 +192,21 @@ function interact() {
     }
   }
   // sell bin
-  if (dist(px, py, BIN.x + 9, BIN.y + 7) < 28) {
+  if (dist(px, py, BIN.x + 14, BIN.y + 18) < 30) {
     if (state.plums > 0) {
       const earned = state.plums * PLUM_PRICE;
       state.coins += earned;
-      toast(BIN.x + 9, BIN.y - 8, `+${earned}g`, '#ffd76b');
+      toast(BIN.x + 14, BIN.y - 6, `+${earned}g`, '#ffd76b');
       state.plums = 0;
       sfx.sell(); save();
     } else {
-      toast(BIN.x + 9, BIN.y - 8, 'no plums!', '#d97b6c');
+      toast(BIN.x + 14, BIN.y - 6, 'no plums!', '#d97b6c');
       sfx.denied();
     }
     return;
   }
-  // shop stand
-  if (dist(px, py, STAND.x + 14, STAND.y + 16) < 32) {
+  // shop vending machine
+  if (dist(px, py, STAND.x + 11, STAND.y + 26) < 30) {
     toggleShop(true);
   }
 }
@@ -460,8 +460,8 @@ function nearestPrompt() {
     if (t.plums > 0 && dist(px, py, t.x + TREE_W / 2, t.y + TREE_H - 6) < 30)
       return { x: t.x + TREE_W / 2, y: t.y - 4, label: 'E' };
   }
-  if (dist(px, py, BIN.x + 9, BIN.y + 7) < 28) return { x: BIN.x + 9, y: BIN.y - 10, label: 'E' };
-  if (dist(px, py, STAND.x + 14, STAND.y + 16) < 32) return { x: STAND.x + 14, y: STAND.y - 8, label: 'E' };
+  if (dist(px, py, BIN.x + 14, BIN.y + 18) < 30) return { x: BIN.x + 14, y: BIN.y - 4, label: 'E' };
+  if (dist(px, py, STAND.x + 11, STAND.y + 26) < 30) return { x: STAND.x + 11, y: STAND.y - 4, label: 'E' };
   return null;
 }
 
@@ -474,8 +474,8 @@ function render() {
   // collect y-sorted drawables
   const draws = [];
   draws.push({ y: HOUSE.y + 34, f: () => ctx.drawImage(houseSprite, HOUSE.x, HOUSE.y) });
-  draws.push({ y: BIN.y + 14, f: () => ctx.drawImage(binSprite, BIN.x, BIN.y) });
-  draws.push({ y: STAND.y + 26, f: () => ctx.drawImage(standSprite, STAND.x, STAND.y) });
+  draws.push({ y: BIN.y + 26, f: () => ctx.drawImage(stallSprite, BIN.x, BIN.y) });
+  draws.push({ y: STAND.y + 34, f: () => ctx.drawImage(vendingSprite, STAND.x, STAND.y) });
   if (state.upgrades.scarecrow)
     draws.push({ y: SCARECROW.y + 24, f: () => ctx.drawImage(scarecrowSprite, SCARECROW.x, SCARECROW.y) });
 
