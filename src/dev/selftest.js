@@ -2,8 +2,10 @@
 // Drives every core verb through the deterministic step() API and returns
 // PASS/FAIL per check. Never included in production builds.
 import { solids, overlaps } from '../world/collision.js';
-import { playerBox, deerBox } from '../world/entities.js';
+import { playerBox, playerFeet, deerBox } from '../world/entities.js';
 import { replan } from '../systems/deer.js';
+import { save, load } from '../core/save.js';
+import { state as gameState } from '../core/state.js';
 
 export function selftest() {
   const D = window.plumDebug, S = D.state, P = D.player;
@@ -117,6 +119,51 @@ export function selftest() {
 
   press('p'); const pz = S.paused; press('p');
   ok('pause', pz && !S.paused);
+
+  // --- Save v2 round-trip ---
+  S.coins = 321; S.plums = 4; S.day = 3; S.dayT = 12.5; S.muted = true;
+  S.trees[0].plums = 2; S.trees[0].t = 4.5;
+  D.teleport(200, 120);
+  const savedAt = { x: P.x, y: P.y };
+  save();
+  S.coins = 0; S.plums = 0; S.day = 1; S.dayT = 0; S.muted = false; P.x = 96; P.y = 96;
+  load();
+  ok('saveRoundTrip', S.coins === 321 && S.plums === 4 && S.day === 3 && S.dayT === 12.5 && S.muted &&
+    S.trees[0].plums === 2 && S.trees[0].t === 4.5 && P.x === savedAt.x && P.y === savedAt.y,
+    D.snapshot());
+  S.muted = false;
+
+  // --- An August (v1) save migrates forward ---
+  localStorage.removeItem('plumRancher.save');
+  localStorage.setItem('plumRancherSaveV1', JSON.stringify({
+    coins: 77, plums: 2, day: 4,
+    upgrades: { fence: true, scarecrow: false, fertilizer: false, treats: false, sapling: true },
+    trees: [{ plums: 5 }, { plums: 1 }],
+  }));
+  const loaded = load();
+  const v2 = JSON.parse(localStorage.getItem('plumRancher.save') || 'null');
+  ok('migratesV1', loaded && S.coins === 77 && S.day === 4 && S.upgrades.fence && !S.upgrades.scarecrow &&
+    S.trees.length === 2 && S.trees[1].plums === 1 && v2?.v === 2,
+    { coins: S.coins, day: S.day, trees: S.trees.map(t => t.plums), v2: v2?.v });
+  localStorage.removeItem('plumRancherSaveV1');
+
+  // --- A corrupt save can't break the game ---
+  localStorage.setItem('plumRancher.save', '{"v":2,"coins":"lots","day":-5,"dayT":1e9,"trees":[{"plums":99}]}');
+  load();
+  ok('corruptSaveSafe', S.coins === 0 && S.day === 1 && S.dayT <= 75 && S.trees[0].plums === 6, D.snapshot());
+  save();
+
+  // --- Debug helpers ---
+  D.teleport(200, 100);
+  const feet = playerFeet();
+  const p0 = S.plums;
+  D.give('plums', 3);
+  const snap = D.snapshot();
+  ok('debugHelpers', Math.abs(feet.x - 200) < 0.01 && Math.abs(feet.y - 100) < 0.01 && S.plums === p0 + 3 &&
+    snap.v === 2 && 'camera' in snap && Array.isArray(snap.deer), { feet, snapKeys: Object.keys(snap) });
+
+  // The test must drive the game's own modules, not stray copies.
+  ok('sameModules', gameState === S);
 
   out.summary = Object.values(out).every(v => v === 'PASS') ? 'ALL PASS' : 'SOME FAILED';
   return out;

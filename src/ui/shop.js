@@ -26,13 +26,20 @@ export function renderShop() {
     }).join('');
 }
 
+// Mark an upgrade owned and apply its one-time effect.
+export function grantUpgrade(key) {
+  if (!(key in state.upgrades) || state.upgrades[key]) return false;
+  state.upgrades[key] = true;
+  if (key === 'sapling') state.trees.push(newTree(TREE_POS[1]));
+  return true;
+}
+
 export function buyItem(i) {
   const it = SHOP_ITEMS[i];
   if (!it || state.upgrades[it.key]) { sfx.denied(); return; }
   if (state.coins < it.price) { sfx.denied(); return; }
   state.coins -= it.price;
-  state.upgrades[it.key] = true;
-  if (it.key === 'sapling') state.trees.push(newTree(TREE_POS[1]));
+  grantUpgrade(it.key);
   sfx.buy(); save(); renderShop();
   toast(player.x + 8, player.y - 12, it.name + '!', '#8fce6e');
 }

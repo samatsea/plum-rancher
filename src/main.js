@@ -1,7 +1,7 @@
 // Boot, input wiring, main loop, debug API.
-import { TREE_POS } from './core/config.js';
+import { TREE_POS, W, H } from './core/config.js';
 import { state, player, newTree } from './core/state.js';
-import { save, load } from './core/save.js';
+import { save, load, snapshotSave } from './core/save.js';
 import { beep } from './core/audio.js';
 import { initInput } from './core/input.js';
 import { updateDay } from './core/clock.js';
@@ -11,8 +11,11 @@ import { toggleIdle } from './systems/autopilot.js';
 import { updatePlayer } from './systems/player.js';
 import { updateDeer, spawnDeer } from './systems/deer.js';
 import { updateTrees } from './systems/trees.js';
-import { toggleShop, renderShop, buyItem } from './ui/shop.js';
+import { toggleShop, renderShop, buyItem, grantUpgrade } from './ui/shop.js';
 import { render } from './render.js';
+import { playerBox, deerFeet, PLAYER_BOX } from './world/entities.js';
+import { solids, overlaps } from './world/collision.js';
+import { camera } from './world/camera.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -30,7 +33,7 @@ initInput((code) => {
   if (code === 'KeyE') interact();
   if (code === 'KeyI') toggleIdle();
   if (code === 'Escape' && state.shopOpen) toggleShop(false);
-  if (code === 'KeyM') { state.muted = !state.muted; toast(player.x, player.y - 14, state.muted ? 'muted' : 'sound on', '#f2e8c9'); }
+  if (code === 'KeyM') { state.muted = !state.muted; save(); toast(player.x, player.y - 14, state.muted ? 'muted' : 'sound on', '#f2e8c9'); }
   if (state.shopOpen && /^Digit[1-5]$/.test(code)) buyItem(Number(code.slice(5)) - 1);
 });
 
@@ -39,8 +42,15 @@ document.getElementById('title').addEventListener('click', () => { if (!state.st
 function startGame() {
   state.started = true;
   document.getElementById('title').classList.add('hidden');
-  if (!load()) state.trees = [newTree(TREE_POS[0])];
+  if (!load(canStand)) state.trees = [newTree(TREE_POS[0])];
   beep(523, 0.08, 'triangle', 0.12); beep(784, 0.12, 'triangle', 0.12, 0.09);
+}
+
+// Could Bronto stand with his sprite's top-left at (x, y)?
+function canStand(x, y) {
+  const b = playerBox(x, y);
+  return b.x >= 0 && b.y >= 0 && b.x + b.w <= W && b.y + b.h <= H &&
+    !solids().some(s => overlaps(b, s));
 }
 
 /* ---------------- Main loop ---------------- */
@@ -73,15 +83,40 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-// Expose a tiny debug API for testing
+// Debug API for testing from the browser console.
 window.plumDebug = {
-  state, player,
-  give(coins) { state.coins += coins; if (state.shopOpen) renderShop(); },
-  spawnDeer,
-  step(seconds = 1) {           // advance simulation manually (for tests)
+  state, player, camera, spawnDeer,
+  // Advance the simulation by fixed steps (works while paused or hidden).
+  step(seconds = 1) {
     const n = Math.round(seconds / STEP);
     for (let i = 0; i < n; i++) tick(STEP);
     render(ctx);
+  },
+  // Put Bronto's feet at (x, y).
+  teleport(x, y) {
+    player.x = x - PLAYER_BOX.x - PLAYER_BOX.w / 2;
+    player.y = y - PLAYER_BOX.y - PLAYER_BOX.h / 2;
+    render(ctx);
+  },
+  // give(50) or give('coins', 50) / give('plums', 6) / give('sapling').
+  give(item, n = 1) {
+    if (typeof item === 'number') { n = item; item = 'coins'; }
+    if (item === 'coins') state.coins += n;
+    else if (item === 'plums') state.plums += n;
+    else if (!grantUpgrade(item)) return `unknown or already owned: ${item}`;
+    if (state.shopOpen) renderShop();
+    return this.snapshot();
+  },
+  // A compact, JSON-friendly picture of the game right now.
+  snapshot() {
+    const r = Math.round;
+    return {
+      ...snapshotSave(),
+      player: { x: r(player.x), y: r(player.y), dir: player.dir },
+      deer: state.deer.map(d => { const f = deerFeet(d); return { state: d.state, x: r(f.x), y: r(f.y) }; }),
+      camera: { ...camera },
+      idle: state.idle, paused: state.paused, shopOpen: state.shopOpen,
+    };
   },
 };
 if (import.meta.env.DEV) {

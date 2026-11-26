@@ -10,7 +10,6 @@ export const SCALE = 2;
 export const DAY_LEN = 75;             // seconds per day
 export const MAX_PLUMS = 6;
 export const PLUM_PRICE = 5;
-export const SAVE_KEY = 'plumRancherSaveV1';
 
 // Fence rectangle (tile coords) around the orchard.
 export const FENCE = { x1: 8, y1: 3, x2: 26, y2: 15 };
