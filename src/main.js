@@ -44,7 +44,12 @@ function startGame() {
 }
 
 /* ---------------- Main loop ---------------- */
+// Fixed 1/60 s simulation step, decoupled from the display's frame rate, so
+// real play behaves exactly like plumDebug.step() in tests.
+const STEP = 1 / 60;
+const MAX_FRAME = 0.25;   // after a long stall (tab hidden), don't fast-forward minutes
 let last = performance.now();
+let acc = 0;
 let saveT = 0;
 function tick(dt) {
   updatePlayer(dt);
@@ -56,9 +61,13 @@ function tick(dt) {
   if (saveT > 5) { saveT = 0; save(); }
 }
 function frame(now) {
-  const dt = Math.min((now - last) / 1000, 0.05);
+  acc += Math.min((now - last) / 1000, MAX_FRAME);
   last = now;
-  if (state.started && !state.paused) tick(dt);
+  if (state.started && !state.paused) {
+    while (acc >= STEP) { tick(STEP); acc -= STEP; }
+  } else {
+    acc = 0;
+  }
   render(ctx);
   requestAnimationFrame(frame);
 }
@@ -70,8 +79,11 @@ window.plumDebug = {
   give(coins) { state.coins += coins; if (state.shopOpen) renderShop(); },
   spawnDeer,
   step(seconds = 1) {           // advance simulation manually (for tests)
-    const n = Math.round(seconds * 60);
-    for (let i = 0; i < n; i++) tick(1 / 60);
+    const n = Math.round(seconds / STEP);
+    for (let i = 0; i < n; i++) tick(STEP);
     render(ctx);
   },
 };
+if (import.meta.env.DEV) {
+  import('./dev/selftest.js').then(m => { window.plumDebug.selftest = m.selftest; });
+}
