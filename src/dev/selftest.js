@@ -44,6 +44,19 @@ export function selftest() {
   D.step(6);
   ok('deerLeave', S.deer.length === 0, { n: S.deer.length });
 
+  // A deer walks in (via a gate, fence is owned now), eats beside the trunk, facing it.
+  at(40, 250);
+  S.trees[0].plums = 6; S.trees[1].plums = 0;      // only tree 0 is a target
+  const before = S.trees[0].plums;
+  D.spawnDeer();
+  const e = S.deer[S.deer.length - 1];
+  D.step(20);
+  const trunkMid = S.trees[0].x + 28.5, feetX = e.x + 9;
+  ok('deerEats', e.state === 'eat' || S.trees[0].plums < before, { st: e.state, plums: S.trees[0].plums });
+  ok('deerFacesTree', e.state !== 'eat' || (feetX < trunkMid) === (e.face > 0),
+    { feetX: Math.round(feetX), trunkMid, face: e.face });
+  S.deer.length = 0;
+
   S.trees.forEach(tr => { tr.plums = 6; }); S.plums = 0;
   const c0 = S.coins;
   at(60, 60); S.idle = true; S.spawnT = 999;

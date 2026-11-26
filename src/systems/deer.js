@@ -1,10 +1,20 @@
 // Deer: wander in, eat plums, flee from Brontosaurus.
 import { W, H, GATES } from '../core/config.js';
-import { state, player } from '../core/state.js';
+import { state } from '../core/state.js';
 import { dist, clamp, rand } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { toast, spawnParticle } from '../fx.js';
-import { DEER_W, DEER_H, TREE_W, TREE_H } from '../sprites.js';
+import { DEER_W } from '../sprites.js';
+import { treeEntity, solidBox, playerFeet, deerFeet, deerAtFeet, DEER_BOX } from '../world/entities.js';
+
+// Where a deer stands to eat: beside the trunk, facing it.
+function eatSpot(tree, side) {
+  const trunk = solidBox(treeEntity(tree));
+  const gap = DEER_BOX.w / 2 + 2;
+  const fx = side < 0 ? trunk.x - gap : trunk.x + trunk.w + gap;
+  const fy = trunk.y + trunk.h / 2 + rand(-2, 2);
+  return deerAtFeet(fx, fy);
+}
 
 export function spawnDeer() {
   const targets = state.trees.filter(t => t.plums > 0);
@@ -19,22 +29,19 @@ export function spawnDeer() {
   else if (side === 2) { x = rand(40, W - 60); y = -18; }
   else { x = rand(40, W - 60); y = H + 4; }
 
-  const eatAngle = Math.random() * Math.PI * 2;
-  const eat = {
-    x: tree.x + TREE_W / 2 + Math.cos(eatAngle) * 16 - DEER_W / 2,
-    y: tree.y + TREE_H - 10 + Math.sin(eatAngle) * 5 - DEER_H / 2,
-  };
+  const eatSide = x < tree.x ? -1 : 1;        // eat on the side we arrive from
+  const eat = eatSpot(tree, eatSide);
 
   const waypoints = [];
   if (state.upgrades.fence) {
     const g = GATES.reduce((a, b) =>
       dist(x, y, a.x, a.y) < dist(x, y, b.x, b.y) ? a : b);
-    waypoints.push({ x: g.x - DEER_W / 2, y: g.y - DEER_H / 2 });
+    waypoints.push(deerAtFeet(g.x, g.y));
   }
   waypoints.push(eat);
 
   state.deer.push({
-    x, y, tree, waypoints, wi: 0,
+    x, y, tree, waypoints, wi: 0, face: -eatSide,  // face the trunk while eating
     state: 'approach', eatT: 0, ate: 0, animT: Math.random() * 10,
   });
 }
@@ -42,13 +49,14 @@ export function spawnDeer() {
 export function startFlee(d) {
   d.state = 'flee';
   // run to nearest map edge
-  const cx = d.x + 9, cy = d.y + 7;
+  const f = deerFeet(d);
   const exits = [
-    { x: -30, y: cy }, { x: W + 30, y: cy },
-    { x: cx, y: -30 }, { x: cx, y: H + 30 },
+    { x: -30, y: f.y }, { x: W + 30, y: f.y },
+    { x: f.x, y: -30 }, { x: f.x, y: H + 30 },
   ];
-  d.fleeTo = exits.reduce((a, b) => dist(cx, cy, a.x, a.y) < dist(cx, cy, b.x, b.y) ? a : b);
-  toast(d.x + 9, d.y - 8, '!', '#d97b6c');
+  const exit = exits.reduce((a, b) => dist(f.x, f.y, a.x, a.y) < dist(f.x, f.y, b.x, b.y) ? a : b);
+  d.fleeTo = deerAtFeet(exit.x, exit.y);
+  toast(d.x + DEER_W / 2, d.y - 8, '!', '#d97b6c');
 }
 
 export function updateDeer(dt) {
@@ -63,14 +71,14 @@ export function updateDeer(dt) {
   }
 
   const eatInterval = state.upgrades.scarecrow ? 5.5 : 2.6;
-  const pcx = player.x + 8, pcy = player.y + 6;
+  const p = playerFeet();
 
   for (const d of state.deer) {
     d.animT += dt;
-    const cx = d.x + DEER_W / 2, cy = d.y + DEER_H / 2;
+    const f = deerFeet(d);
 
     // proximity scare (any state but flee)
-    if (d.state !== 'flee' && dist(cx, cy, pcx, pcy) < 30) startFlee(d);
+    if (d.state !== 'flee' && dist(f.x, f.y, p.x, p.y) < 30) startFlee(d);
 
     if (d.state === 'approach') {
       const wp = d.waypoints[d.wi];
@@ -94,7 +102,7 @@ export function updateDeer(dt) {
         d.ate++;
         sfx.munch();
         spawnParticle({
-          type: 'bit', x: d.x + (d.x < d.tree.x + TREE_W / 2 ? DEER_W : 0), y: d.y + 4,
+          type: 'bit', x: d.face > 0 ? d.x + DEER_W : d.x, y: d.y + 4,   // at the mouth
           vx: rand(-8, 8), vy: -20, life: 0.5, max: 0.5, color: '#8e3b76',
         });
         if (d.tree.plums <= 0) startFlee(d);
@@ -102,12 +110,17 @@ export function updateDeer(dt) {
     } else if (d.state === 'flee') {
       const dd = dist(d.x, d.y, d.fleeTo.x, d.fleeTo.y);
       const sp = 95;
-      d.vx = (d.fleeTo.x - d.x) / dd * sp;
-      d.x += d.vx * dt;
-      d.y += (d.fleeTo.y - d.y) / dd * sp * dt;
+      if (dd > 1) {
+        d.vx = (d.fleeTo.x - d.x) / dd * sp;
+        d.x += d.vx * dt;
+        d.y += (d.fleeTo.y - d.y) / dd * sp * dt;
+      }
     }
   }
-  // remove deer that left the map
-  state.deer = state.deer.filter(d =>
-    !(d.state === 'flee' && (d.x < -25 || d.x > W + 25 || d.y < -25 || d.y > H + 25)));
+  // remove deer that left the map (flee exits are 30 px past the edge)
+  state.deer = state.deer.filter(d => {
+    if (d.state !== 'flee') return true;
+    const f = deerFeet(d);
+    return !(f.x < -20 || f.x > W + 20 || f.y < -20 || f.y > H + 20);
+  });
 }

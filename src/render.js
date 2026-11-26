@@ -1,14 +1,14 @@
 // Draws the world: background, fence, y-sorted sprites, particles, HUD.
-import { TILE, W, H, SCALE, DAY_LEN, FENCE, GATES, HOUSE, BIN, STAND, SCARECROW } from './core/config.js';
+import { TILE, W, H, SCALE, DAY_LEN, FENCE, GATES } from './core/config.js';
 import { state, player } from './core/state.js';
 import { nearestPrompt } from './actions.js';
 import { drawParticles } from './fx.js';
 import { drawHUD, drawPauseOverlay } from './ui/hud.js';
+import { entities } from './world/entities.js';
 import {
   dogFrames, DOG_W, DOG_H,
   deerFrames, DEER_W, DEER_H,
   treeSprite, TREE_W, TREE_H, PLUM_SLOTS, drawPlum,
-  houseSprite, stallSprite, vendingSprite, scarecrowSprite,
   makeBackground, drawFencePost, drawFenceRailH, drawFenceRailV,
 } from './sprites.js';
 
@@ -49,23 +49,22 @@ export function render(ctx) {
 
   // collect y-sorted drawables
   const draws = [];
-  draws.push({ y: HOUSE.y + 34, f: () => ctx.drawImage(houseSprite, HOUSE.x, HOUSE.y) });
-  draws.push({ y: BIN.y + 26, f: () => ctx.drawImage(stallSprite, BIN.x, BIN.y) });
-  draws.push({ y: STAND.y + 34, f: () => ctx.drawImage(vendingSprite, STAND.x, STAND.y) });
-  if (state.upgrades.scarecrow)
-    draws.push({ y: SCARECROW.y + 24, f: () => ctx.drawImage(scarecrowSprite, SCARECROW.x, SCARECROW.y) });
-
-  for (const t of state.trees) {
-    draws.push({
-      y: t.y + TREE_H, f: () => {
-        shadow(ctx, t.x + TREE_W / 2, t.y + TREE_H - 2, 14);
-        ctx.drawImage(treeSprite, t.x, t.y);
-        for (let i = 0; i < t.plums; i++) {
-          const [sx, sy] = PLUM_SLOTS[i];
-          drawPlum(ctx, t.x + sx, t.y + sy);
+  for (const e of entities()) {
+    if (e.tree) {
+      const t = e.tree;
+      draws.push({
+        y: t.y + e.sortY, f: () => {
+          shadow(ctx, t.x + TREE_W / 2, t.y + TREE_H - 2, 14);
+          ctx.drawImage(treeSprite, t.x, t.y);
+          for (let i = 0; i < t.plums; i++) {
+            const [sx, sy] = PLUM_SLOTS[i];
+            drawPlum(ctx, t.x + sx, t.y + sy);
+          }
         }
-      }
-    });
+      });
+    } else {
+      draws.push({ y: e.y + e.sortY, f: () => ctx.drawImage(e.sprite, e.x, e.y) });
+    }
   }
 
   for (const d of state.deer) {
@@ -73,12 +72,13 @@ export function render(ctx) {
       y: d.y + DEER_H, f: () => {
         shadow(ctx, d.x + DEER_W / 2, d.y + DEER_H, 8);
         const frame = deerFrames[(d.state === 'eat') ? 0 : Math.floor(d.animT * 7) % 2];
-        const flip = (d.vx ?? 0) > 0.5; // sprite faces left by default
+        // sprite faces left by default; eating deer face the trunk
+        const flip = d.state === 'eat' ? d.face > 0 : (d.vx ?? 0) > 0.5;
         ctx.save();
         if (flip) { ctx.translate(d.x + DEER_W, d.y); ctx.scale(-1, 1); }
         else ctx.translate(d.x, d.y);
         ctx.drawImage(frame, 0, 0);
-        if (d.ate > 0 && d.state === 'flee') drawPlum(ctx, flip ? 0 : 0, 2);
+        if (d.ate > 0 && d.state === 'flee') drawPlum(ctx, 0, 2);   // plum in its mouth
         ctx.restore();
       }
     });
