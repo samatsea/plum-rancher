@@ -10,11 +10,12 @@ export const MAX_PLUMS = 6;
 export const PLUM_PRICE = 5;
 export const SAVE_KEY = 'plumRancherSaveV1';
 
-// Fence rectangle (tile coords) around the orchard, with two gate openings.
+// Fence rectangle (tile coords) around the orchard.
 export const FENCE = { x1: 8, y1: 3, x2: 26, y2: 15 };
+// Gate openings: a run of tiles left open along one side of the fence.
 export const GATES = [
-  { tx: 17, ty: FENCE.y2, x: 17 * TILE + 8, y: FENCE.y2 * TILE + 8 },   // bottom gate
-  { tx: FENCE.x1, ty: 9, x: FENCE.x1 * TILE + 8, y: 9 * TILE + 8 },     // left gate
+  { side: 'bottom', from: 16, to: 18 },   // columns 16-18 of the bottom row
+  { side: 'left', from: 8, to: 10 },      // rows 8-10 of the left column
 ];
 
 export const SHOP_ITEMS = [

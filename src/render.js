@@ -1,5 +1,6 @@
 // Draws the world: background, fence, y-sorted sprites, particles, HUD.
-import { TILE, W, H, SCALE, DAY_LEN, FENCE, GATES } from './core/config.js';
+import { TILE, W, H, SCALE, DAY_LEN } from './core/config.js';
+import { fenceSegments } from './world/fence.js';
 import { state, player } from './core/state.js';
 import { nearestPrompt } from './actions.js';
 import { drawParticles } from './fx.js';
@@ -16,20 +17,13 @@ const bg = makeBackground(W, H, TILE);
 
 function drawFence(g) {
   if (!state.upgrades.fence) return;
-  const { x1, y1, x2, y2 } = FENCE;
-  const isGate = (tx, ty) => GATES.some(gt => Math.abs(gt.tx - tx) <= 1 && gt.ty === ty);
-  for (let tx = x1; tx <= x2; tx++) {
-    for (const ty of [y1, y2]) {
-      if (isGate(tx, ty)) continue;
-      drawFenceRailH(g, tx * TILE, ty * TILE + 6);
-      if (tx % 2 === 0) drawFencePost(g, tx * TILE, ty * TILE + 6);
-    }
-  }
-  for (let ty = y1 + 1; ty < y2; ty++) {
-    for (const tx of [x1, x2]) {
-      if (isGate(tx, ty)) continue;
-      drawFenceRailV(g, tx * TILE, ty * TILE);
-      if (ty % 2 === 0) drawFencePost(g, tx * TILE, ty * TILE + 8);
+  for (const s of fenceSegments()) {
+    if (s.dir === 'h') {
+      drawFenceRailH(g, s.tx * TILE, s.ty * TILE + 6);
+      if (s.tx % 2 === 0) drawFencePost(g, s.tx * TILE, s.ty * TILE + 6);
+    } else {
+      drawFenceRailV(g, s.tx * TILE, s.ty * TILE);
+      if (s.ty % 2 === 0) drawFencePost(g, s.tx * TILE, s.ty * TILE + 8);
     }
   }
 }
