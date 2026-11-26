@@ -17,7 +17,8 @@
     }
     #wrap {
       position: relative;
-      width: min(960px, 100vw - 24px);
+      /* fit the window both ways (the canvas is 960x544 plus a 5px frame) */
+      width: min(960px, 100vw - 24px, (100vh - 34px) * 960 / 544);
     }
     canvas {
       display: block;
@@ -43,12 +44,15 @@
       padding: 20px;
     }
     .overlay.hidden { display: none; }
+    /* Headings use the pixel font (Silkscreen) at multiples of 8px so it stays crisp. */
     .overlay h1 {
-      font-size: clamp(28px, 5vw, 52px);
+      font-family: Silkscreen, "Courier New", monospace;
+      font-weight: 400;
+      font-size: 48px;
       color: #d989c8;
-      letter-spacing: 3px;
-      text-shadow: 3px 3px 0 #5c2a52;
+      text-shadow: 6px 6px 0 #5c2a52;
     }
+    @media (max-width: 640px) { .overlay h1 { font-size: 32px; text-shadow: 4px 4px 0 #5c2a52; } }
     .overlay p { max-width: 560px; line-height: 1.5; font-size: 15px; }
     .overlay .controls { color: #b7cf9a; font-size: 14px; line-height: 1.8; }
     .overlay .press {
@@ -64,7 +68,7 @@
       padding-top: 36px;
       background: rgba(30, 22, 12, .93);
     }
-    #shop h2 { color: #ffd76b; letter-spacing: 2px; margin-bottom: 4px; }
+    #shop h2 { font: 400 24px Silkscreen, "Courier New", monospace; color: #ffd76b; margin-bottom: 4px; }
     #shop .hint { color: #b7a98a; font-size: 13px; }
     .shop-item {
       width: min(520px, 90%);
@@ -78,15 +82,14 @@
       text-align: left;
     }
     .shop-item .num {
-      font-weight: bold;
+      font: 400 16px Silkscreen, "Courier New", monospace;
       color: #ffd76b;
-      font-size: 18px;
       width: 20px;
     }
     .shop-item .info { flex: 1; }
-    .shop-item .name { font-weight: bold; font-size: 15px; }
+    .shop-item .name { font: 400 16px Silkscreen, "Courier New", monospace; margin-bottom: 2px; }
     .shop-item .desc { font-size: 12.5px; color: #cbbfa4; }
-    .shop-item .price { font-weight: bold; color: #ffd76b; white-space: nowrap; }
+    .shop-item .price { font: 400 16px Silkscreen, "Courier New", monospace; color: #ffd76b; white-space: nowrap; }
     .shop-item.owned { opacity: .55; }
     .shop-item.owned .price { color: #8fce6e; }
     .shop-item.cant .price { color: #d97b6c; }

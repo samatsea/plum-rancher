@@ -1,53 +1,47 @@
-// Heads-up display and pause overlay (canvas).
+// Heads-up display and pause overlay (canvas, screen space).
 import { VIEW_W as W, VIEW_H as H, DAY_LEN } from '../core/config.js';   // screen size
 import { state } from '../core/state.js';
 import { drawPlum } from '../sprites.js';
+import { text, textWidth } from './font.js';
+
+const PANEL = 'rgba(20, 28, 12, 0.72)';
+const INK = '#f2e8c9';
+const HUD_W = 124;          // fits a 5-digit coin count and "DAY 100"
 
 export function drawHUD(ctx) {
-  ctx.font = 'bold 8px monospace';
-  ctx.textAlign = 'left';
-  // panel
-  ctx.fillStyle = 'rgba(20, 28, 12, 0.72)';
-  ctx.fillRect(4, 4, 118, 14);
-  // coin
+  // coins · plums · day — text baseline 14 puts capitals on rows 9-13
+  ctx.fillStyle = PANEL;
+  ctx.fillRect(4, 4, HUD_W, 14);
   ctx.fillStyle = '#ffd76b'; ctx.fillRect(9, 8, 6, 6);
   ctx.fillStyle = '#b8922e'; ctx.fillRect(11, 10, 2, 2);
-  ctx.fillStyle = '#f2e8c9'; ctx.fillText(String(state.coins), 19, 14);
-  // plum
-  drawPlum(ctx, 52, 8);
-  ctx.fillText(String(state.plums), 60, 14);
-  // day
-  ctx.fillText('DAY ' + state.day, 86, 14);
+  text(ctx, String(state.coins), 18, 14);
+  drawPlum(ctx, 52, 10);
+  text(ctx, String(state.plums), 58, 14);
+  text(ctx, 'DAY ' + state.day, 80, 14);
+
   // day progress bar
-  ctx.fillStyle = 'rgba(20, 28, 12, 0.72)';
-  ctx.fillRect(4, 20, 118, 4);
+  ctx.fillStyle = PANEL;
+  ctx.fillRect(4, 20, HUD_W, 4);
   ctx.fillStyle = '#ffd76b';
-  ctx.fillRect(5, 21, 116 * (state.dayT / DAY_LEN), 2);
+  ctx.fillRect(5, 21, (HUD_W - 2) * (state.dayT / DAY_LEN), 2);
+
   // auto-mode badge
   if (state.idle) {
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(20, 28, 12, 0.72)';
-    ctx.fillRect(W - 52, 4, 48, 12);
-    ctx.font = 'bold 8px monospace';
-    ctx.fillStyle = '#8fce6e';
-    ctx.fillText('● AUTO', W - 8, 13);
-    ctx.textAlign = 'left';
+    const label = '• AUTO';
+    const w = Math.ceil(textWidth(ctx, label)) + 9;
+    ctx.fillStyle = PANEL;
+    ctx.fillRect(W - 4 - w, 4, w, 14);
+    text(ctx, label, W - 8, 14, { color: '#8fce6e', align: 'right' });
   }
+
   // controls hint
-  ctx.fillStyle = 'rgba(242,232,201,0.55)';
-  ctx.font = '7px monospace';
-  ctx.fillText('WASD move · SPACE bark · E use · P pause · I auto · M mute', 6, H - 5);
+  text(ctx, 'WASD move · SPACE bark · E use · P pause · I auto · M mute', 6, H - 4,
+    { color: 'rgba(242,232,201,0.6)' });
 }
 
 export function drawPauseOverlay(ctx) {
   ctx.fillStyle = 'rgba(15, 20, 10, 0.62)';
   ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f2e8c9';
-  ctx.font = 'bold 22px monospace';
-  ctx.fillText('PAUSED', W / 2, H / 2 - 2);
-  ctx.font = '8px monospace';
-  ctx.fillStyle = 'rgba(242,232,201,0.8)';
-  ctx.fillText('press P to resume', W / 2, H / 2 + 12);
-  ctx.textAlign = 'left';
+  text(ctx, 'PAUSED', W / 2, H / 2 + 2, { size: 16, bold: true, align: 'center', color: INK });
+  text(ctx, 'press P to resume', W / 2, H / 2 + 18, { align: 'center', color: 'rgba(242,232,201,0.8)' });
 }

@@ -1,6 +1,7 @@
 // Particles: floating text, bark rings, little bits.
 import { state } from './core/state.js';
 import { clamp } from './core/util.js';
+import { text } from './ui/font.js';
 
 export function toast(x, y, text, color) {
   state.particles.push({ type: 'text', x, y, text, color, life: 1.1, max: 1.1 });
@@ -35,13 +36,8 @@ export function drawParticles(ctx) {
       ctx.fillRect(p.x, p.y, 2, 2);
       ctx.globalAlpha = 1;
     } else if (p.type === 'text') {
-      ctx.font = 'bold 8px monospace';
-      ctx.textAlign = 'center';
       ctx.globalAlpha = a;
-      ctx.fillStyle = '#1d1408';
-      ctx.fillText(p.text, p.x + 1, p.y + 1);
-      ctx.fillStyle = p.color;
-      ctx.fillText(p.text, p.x, p.y);
+      text(ctx, p.text, p.x, p.y, { align: 'center', color: p.color, shadow: '#1d1408' });
       ctx.globalAlpha = 1;
     }
   }

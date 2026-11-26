@@ -16,6 +16,7 @@ export function selftest() {
   const ok = (name, cond, extra) => { out[name] = cond ? 'PASS' : 'FAIL ' + JSON.stringify(extra ?? ''); };
 
   if (!S.started) document.getElementById('title').click();
+  if (S.shopOpen) press('Escape');
   // reset to a known state
   S.coins = 0; S.plums = 0; S.day = 1; S.dayT = 0; S.deer.length = 0;
   S.idle = false; S.paused = false;

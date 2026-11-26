@@ -6,6 +6,7 @@ import { state, player } from './core/state.js';
 import { nearestPrompt } from './actions.js';
 import { drawParticles } from './fx.js';
 import { drawHUD, drawPauseOverlay } from './ui/hud.js';
+import { text } from './ui/font.js';
 import { entities, playerFeet } from './world/entities.js';
 import {
   dogFrames, DOG_W, DOG_H,
@@ -108,12 +109,10 @@ export function render(ctx) {
   if (state.started && !state.shopOpen) {
     const pr = nearestPrompt();
     if (pr) {
+      const bx = Math.round(pr.x) - 5, by = Math.round(pr.y) - 8;
       ctx.fillStyle = 'rgba(20,20,10,0.75)';
-      ctx.fillRect(pr.x - 5, pr.y - 7, 10, 9);
-      ctx.fillStyle = '#ffd76b';
-      ctx.font = 'bold 7px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('E', pr.x, pr.y);
+      ctx.fillRect(bx, by, 10, 9);
+      text(ctx, pr.label, bx + 3, by + 7, { color: '#ffd76b' });   // 5px glyph, 2px margin
     }
   }
   ctx.restore();
