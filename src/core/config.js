@@ -1,9 +1,11 @@
 // Tuning constants and static ranch layout.
 
 export const TILE = 16;
-export const MAPW = 30, MAPH = 17;
-export const W = MAPW * TILE;          // 480 native px
-export const H = MAPH * TILE;          // 272 native px
+export const MAPW = 30, MAPH = 17;     // map size in tiles
+export const W = MAPW * TILE;          // map width, native px
+export const H = MAPH * TILE;          // map height, native px
+export const VIEW_W = 480;             // what the screen shows, native px
+export const VIEW_H = 272;             //   (canvas is VIEW * SCALE device px)
 export const SCALE = 2;
 export const DAY_LEN = 75;             // seconds per day
 export const MAX_PLUMS = 6;

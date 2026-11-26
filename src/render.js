@@ -1,11 +1,12 @@
 // Draws the world: background, fence, y-sorted sprites, particles, HUD.
-import { TILE, W, H, SCALE, DAY_LEN } from './core/config.js';
+import { TILE, W, H, VIEW_W, VIEW_H, SCALE, DAY_LEN } from './core/config.js';
 import { fenceSegments } from './world/fence.js';
+import { camera, followCamera } from './world/camera.js';
 import { state, player } from './core/state.js';
 import { nearestPrompt } from './actions.js';
 import { drawParticles } from './fx.js';
 import { drawHUD, drawPauseOverlay } from './ui/hud.js';
-import { entities } from './world/entities.js';
+import { entities, playerFeet } from './world/entities.js';
 import {
   dogFrames, DOG_W, DOG_H,
   deerFrames, DEER_W, DEER_H,
@@ -38,6 +39,14 @@ function shadow(g, x, y, w) {
 export function render(ctx) {
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
   ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#17230f';                 // beyond the map's edge
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+  // ---- world space (through the camera) ----
+  const f = playerFeet();
+  followCamera(f.x, f.y);
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
   ctx.drawImage(bg, 0, 0);
   drawFence(ctx);
 
@@ -107,7 +116,9 @@ export function render(ctx) {
       ctx.fillText('E', pr.x, pr.y);
     }
   }
+  ctx.restore();
 
+  // ---- screen space ----
   // dusk/dawn tint
   const tod = state.dayT / DAY_LEN;
   let tint = 0;
@@ -115,7 +126,7 @@ export function render(ctx) {
   if (tod < 0.08) tint = (0.08 - tod) / 0.08 * 0.28;
   if (tint > 0) {
     ctx.fillStyle = `rgba(30, 25, 70, ${tint})`;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
   }
 
   if (state.started) drawHUD(ctx);

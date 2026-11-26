@@ -1,5 +1,5 @@
 // Heads-up display and pause overlay (canvas).
-import { W, H, DAY_LEN } from '../core/config.js';
+import { VIEW_W as W, VIEW_H as H, DAY_LEN } from '../core/config.js';   // screen size
 import { state } from '../core/state.js';
 import { drawPlum } from '../sprites.js';
 
